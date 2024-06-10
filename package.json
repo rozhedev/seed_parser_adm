@@ -26,6 +26,8 @@
   },
   "dependencies": {
     "@grammyjs/types": "^3.8.0",
+    "@types/mongodb": "^4.0.7",
+    "mongodb": "^6.7.0",
     "randexp": "^0.5.3",
     "ts-node": "^10.9.2"
   }

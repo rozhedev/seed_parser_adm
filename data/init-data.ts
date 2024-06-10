@@ -1,5 +1,5 @@
 export const INIT_DATA = {
-    domain: "https://localhost:3000",
+    domain: "https://google.com",
 };
 
 export const USER_STATES_LIST = {
