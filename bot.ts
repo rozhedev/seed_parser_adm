@@ -7,8 +7,8 @@ import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
 import { COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
-import { InfoEditorBoard, StartBoard } from "./resources/keyboard";
-import { genAuthToken, getTokenInfo } from "./helpers/helpers";
+import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
+import { genAuthToken, getTokenInfo, getTokenListBoard } from "./helpers/helpers";
 import { client } from "./data/db";
 
 dotenv.config();
@@ -21,6 +21,11 @@ bot.use(hydrate());
 
 type TUserState = { [key: number]: string };
 const USER_STATE: TUserState = {};
+
+const selectedToken: { name: string; body: string } = {
+    name: "",
+    body: "",
+};
 
 const collectionConnect = client.db("auth_tokens").collection("tokens");
 
@@ -43,49 +48,94 @@ bot.command("start", async (ctx: CommandContext<Context>) => {
 
 // --> Generate token
 bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) => {
-    ctx.reply(COMMAND_TEXT.enterToken, {
+    USER_STATE[ctx.chat.id] = USER_STATES_LIST.waitTokenName;
+
+    await ctx.reply(COMMAND_TEXT.enterToken, {
         parse_mode: "HTML",
     });
-
-    USER_STATE[ctx.chat.id] = USER_STATES_LIST.waitTokenName;
 });
 
 // --> Token lists
 bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) => {
     // * Get token list from DB and save only token_name prop
+    let board: InlineKeyboard = new InlineKeyboard();
+
     const tokenList = await collectionConnect.find({}).toArray();
+    if (!tokenList.length) return ctx.reply(ERR_TEXT.tokenListEmpty);
+
     const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
 
     // * Create btn rows via Inline keyboard
-    const TokenListBoard: InlineKeyboard = new InlineKeyboard();
-
     TokenListArr.forEach((btn) => {
-        TokenListBoard.text(`${btn}`);
-        TokenListBoard.row();
+        board.text(`${btn}`);
+        board.row();
     });
 
-    ctx.reply("Созданные токены:", {
-        reply_markup: TokenListBoard,
+    await ctx.reply(COMMAND_TEXT.createdToken, {
+        reply_markup: board,
     });
 });
 
 // --> Callback query with tokens info
 bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
-    const tokenBodyList = await collectionConnect.find({}).toArray();
-
-    if (!tokenBodyList.length) return ctx.reply(ERR_TEXT.tokenListEmpty);
-
-    const data = ctx.callbackQuery.data as string;
-    const tokenInfo = await collectionConnect.findOne({ token_name: data });
+    selectedToken.name = ctx.callbackQuery.data as string;
+    const tokenInfo = await collectionConnect.findOne({ token_name: selectedToken.name });
 
     if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
     else {
-        await getTokenInfo(ctx, data, tokenInfo["token_body"]);
-        await ctx.reply("<b>&#8595; Действия &#8595;</b>", {
-            reply_markup: InfoEditorBoard,
+        await getTokenInfo(ctx, selectedToken.name, tokenInfo.token_body);
+        await ctx.reply(COMMAND_TEXT.tokenActions, {
+            reply_markup: TokenEditorBoard,
             parse_mode: "HTML",
         });
     }
+});
+
+// --> Token Info Editor handlers
+// * Exit
+bot.hears(BTN_LABELS.tokenEditorBoard.exit, async (ctx: CommandContext<Context>) => {
+    await ctx.reply(COMMAND_TEXT.exitToMenu, {
+        reply_markup: StartBoard,
+    });
+});
+
+// * Confirm delete
+bot.hears(BTN_LABELS.tokenEditorBoard.delete, async (ctx: CommandContext<Context>) => {
+    await ctx.reply(COMMAND_TEXT.confirmDelete, {
+        reply_markup: ConfirmDelBoard,
+    });
+});
+
+// * Delete handler
+bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) => {
+    const deletedDocument = await collectionConnect.deleteOne({ token_name: selectedToken.name });
+
+    let board: InlineKeyboard = new InlineKeyboard();
+
+    const tokenList = await collectionConnect.find({}).toArray();
+    if (!tokenList.length) return ctx.reply(ERR_TEXT.tokenListEmpty);
+
+    const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
+
+    // * Create btn rows via Inline keyboard
+    TokenListArr.forEach((btn) => {
+        board.text(`${btn}`);
+        board.row();
+    });
+
+    await ctx.reply(COMMAND_TEXT.successDelete, {
+        reply_markup: board,
+    });
+    await ctx.reply(COMMAND_TEXT.tokenActions, {
+        reply_markup: TokenEditorBoard,
+        parse_mode: "HTML",
+    });
+});
+
+bot.hears(BTN_LABELS.confirmDelBoard.no, async (ctx: CommandContext<Context>) => {
+    ctx.reply(COMMAND_TEXT.canceledDelete, {
+        reply_markup: StartBoard,
+    });
 });
 
 // --> Any message handler
