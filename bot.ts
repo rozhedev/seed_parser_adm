@@ -1,5 +1,5 @@
 import * as dotenv from "dotenv";
-import { Bot, GrammyError, HttpError, Keyboard, InlineKeyboard, Context, CommandContext, BotError } from "grammy";
+import { Bot, GrammyError, HttpError, Keyboard, InlineKeyboard, Context, CommandContext, BotError, CallbackQueryContext } from "grammy";
 import { hydrate } from "@grammyjs/hydrate";
 
 import { BOT_TOKEN } from "./data/env";
@@ -8,7 +8,7 @@ import { COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
 import { StartKeyboard } from "./resources/keyboard";
-import { genAuthToken } from "./helpers/genToken";
+import { genAuthToken, getTokenInfo } from "./helpers/helpers";
 import { client } from "./data/db";
 
 dotenv.config();
@@ -22,22 +22,18 @@ bot.use(hydrate());
 type TUserState = { [key: number]: string };
 const USER_STATE: TUserState = {};
 
-type T_TokenInfo = {
-    token_name: string;
-    token_body: string;
-};
-
 const collectionConnect = client.db("auth_tokens").collection("tokens");
 
-// * Commands config
+// --> Commands config
 bot.api.setMyCommands([
     // * Only lowercase letters
     {
         command: "start",
-        description: "Bot starting",
+        description: "Запуск бота",
     },
 ]);
 
+// --> Start command
 bot.command("start", async (ctx: CommandContext<Context>) => {
     await ctx.reply(COMMAND_TEXT.startMessage, {
         parse_mode: "HTML",
@@ -45,6 +41,7 @@ bot.command("start", async (ctx: CommandContext<Context>) => {
     });
 });
 
+// --> Generate token
 bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) => {
     ctx.reply(COMMAND_TEXT.enterToken, {
         parse_mode: "HTML",
@@ -53,43 +50,56 @@ bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) =
     USER_STATE[ctx.chat.id] = USER_STATES_LIST.waitTokenName;
 });
 
+// --> Token lists
 bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) => {
+    // * Get token list from DB and save only token_name prop
     const tokenList = await collectionConnect.find({}).toArray();
-    ctx.reply(
-        `
-        Список токенов:
-    ${tokenList.map((item: any, i) => {
-        return `${i + 1}. Название: <code>${item.token_name}</code>
-        Токен: <code>${item.token_body}</code>
-`;
-    })}
-        `,
-        {
-            parse_mode: "HTML",
-        }
-    );
+    const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
+
+    // * Create btn rows via Inline keyboard
+    const TokenListBoard: InlineKeyboard = new InlineKeyboard();
+
+    TokenListArr.forEach((btn) => {
+        TokenListBoard.text(`${btn}`);
+        TokenListBoard.row();
+    });
+
+    ctx.reply("Созданные токены:", {
+        reply_markup: TokenListBoard,
+    });
 });
 
-// * Message handler
+// --> Callback query with tokens info
+bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
+    const tokenBodyList = await collectionConnect.find({}).toArray();
+
+    if (!tokenBodyList.length) return ctx.reply(ERR_TEXT.tokenListEmpty);
+
+    const data = ctx.callbackQuery.data as string;
+    const tokenInfo = await collectionConnect.findOne({ token_name: data });
+
+    let reply = tokenInfo === null ? ctx.reply(ERR_TEXT.tokenNotFound) : getTokenInfo(ctx, data, tokenInfo["token_body"]);
+    return reply;
+});
+
+// --> Any message handler
 bot.on("msg", async (ctx: CommandContext<Context>) => {
-    const userId = ctx.chat.id;
+    const userId: number = ctx.chat.id;
 
     if (USER_STATE[userId] === USER_STATES_LIST.waitTokenName) {
-        const tokenName = ctx.message?.text;
-        const tokenBody = genAuthToken(REGEX_LIST.token);
-
-        ctx.reply(`Имя токена: <pre>${tokenName}</pre> Ваш токен: <pre>${tokenBody}</pre>`, {
-            parse_mode: "HTML",
-        });
+        // * Necessary type assertion for prevent typo errors
+        const tokenName = ctx.message?.text as string;
+        const tokenBody = genAuthToken(REGEX_LIST.token) as string;
+        
+        getTokenInfo(ctx, tokenName, tokenBody);
 
         await collectionConnect.insertOne({ token_name: tokenName, token_body: tokenBody });
-        bot.start();
     } else {
         await ctx.reply(ERR_TEXT.msgSended);
     }
 });
 
-// * Error handling
+// --> Error handling
 bot.catch((err: BotError) => {
     const ctx = err.ctx;
     const e = err.error;
