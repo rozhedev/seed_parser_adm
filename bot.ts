@@ -1,5 +1,5 @@
 import * as dotenv from "dotenv";
-import { Bot, GrammyError, HttpError, Keyboard, InlineKeyboard, Context, CommandContext, BotError, CallbackQueryContext } from "grammy";
+import { Bot, GrammyError, HttpError, InlineKeyboard, Context, CommandContext, BotError, CallbackQueryContext, Keyboard } from "grammy";
 import { hydrate } from "@grammyjs/hydrate";
 
 import { BOT_TOKEN } from "./data/env";
@@ -7,7 +7,7 @@ import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
 import { COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
-import { StartKeyboard } from "./resources/keyboard";
+import { InfoEditorBoard, StartBoard } from "./resources/keyboard";
 import { genAuthToken, getTokenInfo } from "./helpers/helpers";
 import { client } from "./data/db";
 
@@ -37,7 +37,7 @@ bot.api.setMyCommands([
 bot.command("start", async (ctx: CommandContext<Context>) => {
     await ctx.reply(COMMAND_TEXT.startMessage, {
         parse_mode: "HTML",
-        reply_markup: StartKeyboard,
+        reply_markup: StartBoard,
     });
 });
 
@@ -78,8 +78,14 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     const data = ctx.callbackQuery.data as string;
     const tokenInfo = await collectionConnect.findOne({ token_name: data });
 
-    let reply = tokenInfo === null ? ctx.reply(ERR_TEXT.tokenNotFound) : getTokenInfo(ctx, data, tokenInfo["token_body"]);
-    return reply;
+    if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
+    else {
+        await getTokenInfo(ctx, data, tokenInfo["token_body"]);
+        await ctx.reply("<b>&#8595; Действия &#8595;</b>", {
+            reply_markup: InfoEditorBoard,
+            parse_mode: "HTML",
+        });
+    }
 });
 
 // --> Any message handler
@@ -90,7 +96,7 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
         // * Necessary type assertion for prevent typo errors
         const tokenName = ctx.message?.text as string;
         const tokenBody = genAuthToken(REGEX_LIST.token) as string;
-        
+
         getTokenInfo(ctx, tokenName, tokenBody);
 
         await collectionConnect.insertOne({ token_name: tokenName, token_body: tokenBody });
