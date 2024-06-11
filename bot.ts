@@ -8,8 +8,10 @@ import { COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
-import { genAuthToken, getTokenInfo, getTokenListBoard } from "./helpers/helpers";
+import { genAuthToken, getTokenInfo, getTokenListBoard } from "./helpers";
 import { client } from "./data/db";
+import { WithId } from "mongodb";
+import { T_TokenList } from "./types";
 
 dotenv.config();
 
@@ -57,19 +59,10 @@ bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) =
 
 // --> Token lists
 bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) => {
-    // * Get token list from DB and save only token_name prop
-    let board: InlineKeyboard = new InlineKeyboard();
+    const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
 
-    const tokenList = await collectionConnect.find({}).toArray();
-    if (!tokenList.length) return ctx.reply(ERR_TEXT.tokenListEmpty);
-
-    const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
-
-    // * Create btn rows via Inline keyboard
-    TokenListArr.forEach((btn) => {
-        board.text(`${btn}`);
-        board.row();
-    });
+    // * Hard type assertion for prevent typo errors in async keyboard generating
+    let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
 
     await ctx.reply(COMMAND_TEXT.createdToken, {
         reply_markup: board,
@@ -106,22 +99,15 @@ bot.hears(BTN_LABELS.tokenEditorBoard.delete, async (ctx: CommandContext<Context
     });
 });
 
+// TODO Integrate hydrate for improve confirm deleting
+
 // * Delete handler
 bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) => {
     const deletedDocument = await collectionConnect.deleteOne({ token_name: selectedToken.name });
+    const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
 
-    let board: InlineKeyboard = new InlineKeyboard();
-
-    const tokenList = await collectionConnect.find({}).toArray();
-    if (!tokenList.length) return ctx.reply(ERR_TEXT.tokenListEmpty);
-
-    const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
-
-    // * Create btn rows via Inline keyboard
-    TokenListArr.forEach((btn) => {
-        board.text(`${btn}`);
-        board.row();
-    });
+    // * Hard type assertion for prevent typo errors in async keyboard generating
+    let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
 
     await ctx.reply(COMMAND_TEXT.successDelete, {
         reply_markup: board,

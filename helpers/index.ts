@@ -1,5 +1,5 @@
 import { CallbackQueryContext, CommandContext, Context, InlineKeyboard, Keyboard } from "grammy";
-import { Collection } from "mongodb";
+import { Collection, ObjectId, WithId } from "mongodb";
 
 type TContext = CommandContext<Context> | CallbackQueryContext<Context>;
 type TBoard = Keyboard | InlineKeyboard;
@@ -19,13 +19,20 @@ export const getTokenInfo = (ctx: TContext, name: string, body: string) => {
     });
 };
 
-export const getTokenListBoard = (arr: string[], board: TBoard) => {
+export const getTokenListBoard = (tokenList: WithId<any>[], errText: string) => {
+    let board: InlineKeyboard = new InlineKeyboard();
+
+    if (!tokenList.length) return new InlineKeyboard().text(errText).row();
+
+    // * Get token list from DB and save only token_name prop
+    const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
+
     // * Create btn rows via Inline keyboard
-    let result = arr.forEach((btn) => {
+    TokenListArr.forEach((btn) => {
         board.text(`${btn}`);
         board.row();
     });
-    return result;
+    return board;
 };
 
 export const getOneFromDB = (ctx: TContext, collection: any) => {
