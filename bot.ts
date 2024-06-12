@@ -12,7 +12,7 @@ import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
 import { bip39 } from "./data/bip39";
 
-import { genFromRegex, useSeedPhrase, getTokenInfo, getTokenListBoard } from "./helpers";
+import { genFromRegex, useSeedPhrase, getTokenInfo, getTokenListBoard, genToken, showTokenList } from "./helpers";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
 
 dotenv.config();
@@ -39,6 +39,14 @@ bot.api.setMyCommands([
         command: "start",
         description: "Запуск бота",
     },
+    {
+        command: "gentoken",
+        description: "Генерация нового токена",
+    },
+    {
+        command: "showtoken",
+        description: "Показать список токенов",
+    },
 ]);
 
 // --> Start command
@@ -50,24 +58,21 @@ bot.command("start", async (ctx: CommandContext<Context>) => {
 });
 
 // --> Generate token
-bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) => {
-    USER_STATE[ctx.chat.id] = USER_STATES_LIST.waitTokenName;
+bot.command("gentoken", async (ctx: CommandContext<Context>) => {
+    genToken(ctx, USER_STATE, ctx.chat.id, USER_STATES_LIST.waitTokenName);
+});
 
-    await ctx.reply(COMMAND_TEXT.token.enterName, {
-        parse_mode: "HTML",
-    });
+bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) => {
+    genToken(ctx, USER_STATE, ctx.chat.id, USER_STATES_LIST.waitTokenName);
 });
 
 // --> Token lists
+bot.command("showtoken", async (ctx: CommandContext<Context>) => {
+    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty)
+});
+
 bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) => {
-    const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
-
-    // * Hard type assertion for prevent typo errors in async keyboard generating
-    let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
-
-    await ctx.reply(COMMAND_TEXT.token.created, {
-        reply_markup: board,
-    });
+    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty)
 });
 
 // --> Handler fo inline buttons
@@ -91,7 +96,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     else {
         // * Use prop as external store for save selected token name
         USER_STATE.tokenName = ctx.callbackQuery.data as string;
-        
+
         await getTokenInfo(ctx, selectedToken.token_name, tokenInfo.token_body, tokenInfo.is_search_started, tokenInfo.is_seed_sended);
         await ctx.reply(COMMAND_TEXT.token.actions, {
             reply_markup: TokenEditorBoard,

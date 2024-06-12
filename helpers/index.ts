@@ -1,6 +1,6 @@
-import { InlineKeyboard } from "grammy";
+import { CommandContext, Context, InlineKeyboard } from "grammy";
 import { WithId } from "mongodb";
-import { TContext } from "../types";
+import { TContext, TUserState } from "../types";
 import { COMMAND_TEXT } from "../data/command-text";
 import { PASSPHRASE_LENGTH } from "../data/init-data";
 
@@ -67,3 +67,23 @@ export const useSeedPhrase = (wordArr: string[]) => {
 function getRandomIndex(wordArr: string[]) {
     return Math.round(Math.random() * wordArr.length);
 }
+
+// * Standart bot commands
+export const genToken = async (ctx: CommandContext<Context>, store: TUserState, storeId: number, stateListProp: string) => {
+    store[storeId] = stateListProp;
+
+    await ctx.reply(COMMAND_TEXT.token.enterName, {
+        parse_mode: "HTML",
+    });
+};
+
+export const showTokenList = async (ctx: CommandContext<Context>, collection: any, errText: string) => {
+    const tokenList: WithId<any>[] = await collection.find({}).toArray();
+
+    // * Hard type assertion for prevent typo errors in async keyboard generating
+    let board = getTokenListBoard(tokenList, errText) as unknown as InlineKeyboard;
+
+    await ctx.reply(COMMAND_TEXT.token.created, {
+        reply_markup: board,
+    });
+};
