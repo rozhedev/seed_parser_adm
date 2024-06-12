@@ -1,7 +1,16 @@
+import { CallbackQueryContext, CommandContext, Context, InlineKeyboard, Keyboard } from "grammy";
 import { ObjectId } from "mongodb";
 
-export type T_TokenList<T> = {
-    id: ObjectId;
+export type TUserState = { [key: number]: string };
+
+export type T_Token = {
+    id?: ObjectId;
     token_name: string;
-    token_list: string;
-} & T;
+    token_body: string;
+    is_search_started: boolean;
+    is_seed_sended: boolean;
+};
+
+export type TContext = CommandContext<Context> | CallbackQueryContext<Context>;
+
+export type TBoard = Keyboard | InlineKeyboard;

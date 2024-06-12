@@ -1,8 +1,6 @@
-import { CallbackQueryContext, CommandContext, Context, InlineKeyboard, Keyboard } from "grammy";
-import { Collection, ObjectId, WithId } from "mongodb";
-
-type TContext = CommandContext<Context> | CallbackQueryContext<Context>;
-type TBoard = Keyboard | InlineKeyboard;
+import { InlineKeyboard } from "grammy";
+import { WithId } from "mongodb";
+import { TContext } from "../types";
 
 // * Don't change import method
 const RandExp = require("randexp");
@@ -14,9 +12,15 @@ export const genAuthToken = (regex: RegExp) => {
 };
 
 export const getTokenInfo = (ctx: TContext, name: string, body: string) => {
-    return ctx.reply(`Имя токена: <pre>${name}</pre> Токен для входа: <pre>${body}</pre>`, {
-        parse_mode: "HTML",
-    });
+    return ctx.reply(
+        `
+        Имя токена: <pre><code>${name}</code></pre> Токен для входа: <pre><code>${body}</code></pre> Не начал поиск 
+        seed не отправлен
+        `,
+        {
+            parse_mode: "HTML",
+        }
+    );
 };
 
 export const getTokenListBoard = (tokenList: WithId<any>[], errText: string) => {

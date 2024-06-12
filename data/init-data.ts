@@ -4,7 +4,8 @@ export const INIT_DATA = {
 
 export const USER_STATES_LIST = {
     waitTokenName: "enter_token_name",
-    tokenInfo: "token_info"
+    tokenInfo: "token_info",
+    editTokenName: "edit_token_name",
 };
 
 export const REGEX_LIST = {
