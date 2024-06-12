@@ -2,6 +2,7 @@ import { InlineKeyboard } from "grammy";
 import { WithId } from "mongodb";
 import { TContext } from "../types";
 import { COMMAND_TEXT } from "../data/command-text";
+import { PASSPHRASE_LENGTH } from "../data/init-data";
 
 // * Don't change import method
 const RandExp = require("randexp");
@@ -12,10 +13,10 @@ export const genFromRegex = (regex: RegExp) => {
     return token;
 };
 
-export const getTokenInfo = (ctx: TContext, name: string, body: string, is_search_started: boolean, is_seed_sended: boolean) => {
-    let searchStatusText: string = is_search_started ? COMMAND_TEXT.status.searchStarted.yes : COMMAND_TEXT.status.searchStarted.no;
+export const getTokenInfo = (ctx: TContext, name: string, body: string, isSearchStarted: boolean, isSeedSended: boolean) => {
+    let searchStatusText: string = isSearchStarted ? COMMAND_TEXT.status.searchStarted.yes : COMMAND_TEXT.status.searchStarted.no;
 
-    let seedStatusText: string = is_seed_sended ? COMMAND_TEXT.status.seedSended.yes : COMMAND_TEXT.status.seedSended.no;
+    let seedStatusText: string = isSeedSended ? COMMAND_TEXT.status.seedSended.yes : COMMAND_TEXT.status.seedSended.no;
     return ctx.reply(
         `
         Имя токена: <pre>${name}</pre> Токен для входа: <pre>${body}</pre>\n\n ${searchStatusText} \n ${seedStatusText} \n
@@ -47,3 +48,22 @@ export const getOneFromDB = (ctx: TContext, collection: any) => {
     const document = collection.findOne({ token_name: data });
     return document;
 };
+
+export const useSeedPhrase = (wordArr: string[]) => {
+    let randomIndex = 0;
+    let passArr = [];
+
+    for (let i = 0; i < PASSPHRASE_LENGTH; i++) {
+        randomIndex = getRandomIndex(wordArr);
+        passArr.push(wordArr[randomIndex]);
+        if (i >= 1 && passArr[i] == passArr[i - 1]) passArr.push(wordArr[getRandomIndex(wordArr)]);
+    }
+
+    let passStr = passArr.join(" ");
+    let passLength = passArr.length;
+    return { passArr, passStr, passLength };
+};
+
+function getRandomIndex(wordArr: string[]) {
+    return Math.round(Math.random() * wordArr.length);
+}

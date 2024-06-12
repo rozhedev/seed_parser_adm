@@ -10,8 +10,9 @@ import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
 import { COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
+import { bip39 } from "./data/bip39";
 
-import { genFromRegex, getTokenInfo, getTokenListBoard } from "./helpers";
+import { genFromRegex, useSeedPhrase, getTokenInfo, getTokenListBoard } from "./helpers";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
 
 dotenv.config();
@@ -149,10 +150,10 @@ bot.hears(BTN_LABELS.tokenEditorBoard.changeName, async (ctx: CommandContext<Con
 
 // ? Generate & send seed
 bot.hears(BTN_LABELS.tokenEditorBoard.genSeed, async (ctx: CommandContext<Context>) => {
-    let newSeed = genFromRegex(REGEX_LIST.seed);
+    const { passStr } = useSeedPhrase(bip39);
     let board = new InlineKeyboard().text(BTN_LABELS.tokenEditorBoard.sendSeed).row();
 
-    ctx.reply(`seed-фраза: <code>${newSeed}</code>`, {
+    ctx.reply(`seed-фраза: <code>${passStr}</code>`, {
         reply_markup: board,
         parse_mode: "HTML",
     });
