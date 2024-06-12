@@ -73,10 +73,13 @@ bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) 
 // --> Handler fo inline buttons
 bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     selectedToken.token_name = ctx.callbackQuery.data as string;
+
     const tokenInfo = await collectionConnect.findOne({ token_name: selectedToken.token_name });
 
     // * Send seed
     if (ctx.callbackQuery.data === BTN_LABELS.tokenEditorBoard.sendSeed) {
+        await collectionConnect.updateOne({ token_name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
+
         ctx.reply(COMMAND_TEXT.status.seedSended.finished, {
             reply_markup: StartBoard,
             parse_mode: "HTML",
@@ -86,6 +89,9 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     // * Choose token & output token editor keyboard
     if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
     else {
+        // * Use prop as external store for save selected token name
+        USER_STATE.tokenName = ctx.callbackQuery.data as string;
+        
         await getTokenInfo(ctx, selectedToken.token_name, tokenInfo.token_body, tokenInfo.is_search_started, tokenInfo.is_seed_sended);
         await ctx.reply(COMMAND_TEXT.token.actions, {
             reply_markup: TokenEditorBoard,
