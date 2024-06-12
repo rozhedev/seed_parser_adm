@@ -11,7 +11,7 @@ import { COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
 
-import { genAuthToken, getTokenInfo, getTokenListBoard } from "./helpers";
+import { genFromRegex, getTokenInfo, getTokenListBoard } from "./helpers";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
 
 dotenv.config();
@@ -52,7 +52,7 @@ bot.command("start", async (ctx: CommandContext<Context>) => {
 bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) => {
     USER_STATE[ctx.chat.id] = USER_STATES_LIST.waitTokenName;
 
-    await ctx.reply(COMMAND_TEXT.enterToken, {
+    await ctx.reply(COMMAND_TEXT.token.enterName, {
         parse_mode: "HTML",
     });
 });
@@ -64,20 +64,29 @@ bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) 
     // * Hard type assertion for prevent typo errors in async keyboard generating
     let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
 
-    await ctx.reply(COMMAND_TEXT.createdToken, {
+    await ctx.reply(COMMAND_TEXT.token.created, {
         reply_markup: board,
     });
 });
 
-// --> Choose token & output token editor keyboard
+// --> Handler fo inline buttons
 bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     selectedToken.token_name = ctx.callbackQuery.data as string;
     const tokenInfo = await collectionConnect.findOne({ token_name: selectedToken.token_name });
 
+    // * Send seed
+    if (ctx.callbackQuery.data === BTN_LABELS.tokenEditorBoard.sendSeed) {
+        ctx.reply(COMMAND_TEXT.status.seedSended.finished, {
+            reply_markup: StartBoard,
+            parse_mode: "HTML",
+        });
+        return;
+    }
+    // * Choose token & output token editor keyboard
     if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
     else {
-        await getTokenInfo(ctx, selectedToken.token_name, tokenInfo.token_body);
-        await ctx.reply(COMMAND_TEXT.tokenActions, {
+        await getTokenInfo(ctx, selectedToken.token_name, tokenInfo.token_body, tokenInfo.is_search_started, tokenInfo.is_seed_sended);
+        await ctx.reply(COMMAND_TEXT.token.actions, {
             reply_markup: TokenEditorBoard,
             parse_mode: "HTML",
         });
@@ -88,7 +97,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
 
 // ? Exit
 bot.hears(BTN_LABELS.tokenEditorBoard.exit, async (ctx: CommandContext<Context>) => {
-    await ctx.reply(COMMAND_TEXT.exitToMenu, {
+    await ctx.reply(COMMAND_TEXT.exit.toMenu, {
         reply_markup: StartBoard,
     });
 });
@@ -97,7 +106,7 @@ bot.hears(BTN_LABELS.tokenEditorBoard.exit, async (ctx: CommandContext<Context>)
 bot.hears(BTN_LABELS.tokenEditorBoard.delete, async (ctx: CommandContext<Context>) => {
     USER_STATE[ctx.chat.id] = USER_STATES_LIST.editTokenName;
 
-    await ctx.reply(COMMAND_TEXT.confirmDelete, {
+    await ctx.reply(COMMAND_TEXT.delete.confirm, {
         reply_markup: ConfirmDelBoard,
     });
 });
@@ -111,11 +120,11 @@ bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) =
     // * Hard type assertion for prevent typo errors in async keyboard generating
     let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
 
-    await ctx.reply(COMMAND_TEXT.chooseToken, {
+    await ctx.reply(COMMAND_TEXT.token.chooseFromList, {
         reply_markup: StartBoard,
         parse_mode: "HTML",
     });
-    await ctx.reply(COMMAND_TEXT.successDelete, {
+    await ctx.reply(COMMAND_TEXT.delete.success, {
         reply_markup: board,
     });
 });
@@ -124,7 +133,7 @@ bot.hears(BTN_LABELS.confirmDelBoard.no, async (ctx: CommandContext<Context>) =>
     const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
 
     const board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty);
-    ctx.reply(COMMAND_TEXT.canceledDelete, {
+    ctx.reply(COMMAND_TEXT.delete.canceled, {
         reply_markup: board,
     });
 });
@@ -133,7 +142,18 @@ bot.hears(BTN_LABELS.confirmDelBoard.no, async (ctx: CommandContext<Context>) =>
 bot.hears(BTN_LABELS.tokenEditorBoard.changeName, async (ctx: CommandContext<Context>) => {
     USER_STATE[ctx.chat.id] = USER_STATES_LIST.editTokenName;
 
-    ctx.reply(COMMAND_TEXT.editTokenName, {
+    ctx.reply(COMMAND_TEXT.token.editName, {
+        parse_mode: "HTML",
+    });
+});
+
+// ? Generate & send seed
+bot.hears(BTN_LABELS.tokenEditorBoard.genSeed, async (ctx: CommandContext<Context>) => {
+    let newSeed = genFromRegex(REGEX_LIST.seed);
+    let board = new InlineKeyboard().text(BTN_LABELS.tokenEditorBoard.sendSeed).row();
+
+    ctx.reply(`seed-фраза: <code>${newSeed}</code>`, {
+        reply_markup: board,
         parse_mode: "HTML",
     });
 });
@@ -147,9 +167,10 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
     if (USER_STATE[userId] === USER_STATES_LIST.waitTokenName) {
         // * Necessary type assertion for prevent typo errors
         const tokenName = ctx.message?.text as string;
-        const tokenBody = genAuthToken(REGEX_LIST.token) as string;
+        const tokenBody = genFromRegex(REGEX_LIST.token) as string;
 
-        getTokenInfo(ctx, tokenName, tokenBody);
+        // * Pass false by default
+        getTokenInfo(ctx, tokenName, tokenBody, false, false);
 
         const newToken: T_Token = {
             token_name: tokenName,
@@ -165,7 +186,7 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
 
         await collectionConnect.updateOne({ token_name: selectedToken.token_name }, { $set: { token_name: newTokenName } });
 
-        ctx.reply(COMMAND_TEXT.successChangedName, {
+        ctx.reply(COMMAND_TEXT.token.successChangedName, {
             reply_markup: StartBoard,
         });
     } else {

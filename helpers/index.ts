@@ -1,21 +1,24 @@
 import { InlineKeyboard } from "grammy";
 import { WithId } from "mongodb";
 import { TContext } from "../types";
+import { COMMAND_TEXT } from "../data/command-text";
 
 // * Don't change import method
 const RandExp = require("randexp");
 
-export const genAuthToken = (regex: RegExp) => {
+export const genFromRegex = (regex: RegExp) => {
     const randexp: any = new RandExp(regex);
     let token: string = randexp.gen();
     return token;
 };
 
-export const getTokenInfo = (ctx: TContext, name: string, body: string) => {
+export const getTokenInfo = (ctx: TContext, name: string, body: string, is_search_started: boolean, is_seed_sended: boolean) => {
+    let searchStatusText: string = is_search_started ? COMMAND_TEXT.status.searchStarted.yes : COMMAND_TEXT.status.searchStarted.no;
+
+    let seedStatusText: string = is_seed_sended ? COMMAND_TEXT.status.seedSended.yes : COMMAND_TEXT.status.seedSended.no;
     return ctx.reply(
         `
-        Имя токена: <pre><code>${name}</code></pre> Токен для входа: <pre><code>${body}</code></pre> Не начал поиск 
-        seed не отправлен
+        Имя токена: <pre>${name}</pre> Токен для входа: <pre>${body}</pre>\n\n ${searchStatusText} \n ${seedStatusText} \n
         `,
         {
             parse_mode: "HTML",

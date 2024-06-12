@@ -10,4 +10,5 @@ export const USER_STATES_LIST = {
 
 export const REGEX_LIST = {
     token: /^[a-z0-9]{12}$/,
+    seed: /^[A-Za-z]{16}$/
 };
