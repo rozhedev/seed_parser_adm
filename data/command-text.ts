@@ -1,6 +1,12 @@
 import { INIT_DATA } from "./init-data";
 
 export const COMMAND_TEXT = {
+    start: "Запуск бота",
+    gentoken: "Генерация нового токена",
+    showtokenlist: "Показать список токенов",
+}
+
+export const ANSWER_TEXT = {
     startMessage: `Админка для управления клиентами\. Сайт расположен <b><a href="${INIT_DATA.domain}">здесь</a></b>`,
     token: {
         enterName: `Введите имя токена, например: <i>Тамара, 42, Волгоград</i>`,

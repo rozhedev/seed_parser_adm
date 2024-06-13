@@ -3,16 +3,17 @@ import { Bot, GrammyError, HttpError, InlineKeyboard, Context, CommandContext, B
 import { hydrate } from "@grammyjs/hydrate";
 import { WithId } from "mongodb";
 
-import { T_Token, TUserState } from "./types";
+import { T_Token } from "./types";
 import { BOT_TOKEN } from "./data/env";
 import { client } from "./data/db";
 import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
-import { COMMAND_TEXT } from "./data/command-text";
+import { ANSWER_TEXT, COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
 import { bip39 } from "./data/bip39";
 
 import { genFromRegex, useSeedPhrase, getTokenInfo, getTokenListBoard, genToken, showTokenList } from "./helpers";
+import { USER_STATE, selectedToken } from "./resources/store";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
 
 dotenv.config();
@@ -20,16 +21,6 @@ dotenv.config();
 // * Use type: any for prevent error
 const bot: any = new Bot<Context>(BOT_TOKEN);
 bot.use(hydrate());
-
-// * Store objects
-const USER_STATE: TUserState = {};
-const selectedToken: T_Token = {
-    token_name: "",
-    token_body: "",
-    is_search_started: false,
-    is_seed_sended: false,
-};
-
 const collectionConnect = client.db("auth_tokens").collection("tokens");
 
 // --> Commands config
@@ -37,21 +28,21 @@ bot.api.setMyCommands([
     // * Only lowercase letters
     {
         command: "start",
-        description: "Запуск бота",
+        description: COMMAND_TEXT.start,
     },
     {
         command: "gentoken",
-        description: "Генерация нового токена",
+        description: COMMAND_TEXT.gentoken,
     },
     {
-        command: "showtoken",
-        description: "Показать список токенов",
+        command: "showtokenlist",
+        description: COMMAND_TEXT.showtokenlist,
     },
 ]);
 
 // --> Start command
 bot.command("start", async (ctx: CommandContext<Context>) => {
-    await ctx.reply(COMMAND_TEXT.startMessage, {
+    await ctx.reply(ANSWER_TEXT.startMessage, {
         parse_mode: "HTML",
         reply_markup: StartBoard,
     });
@@ -67,12 +58,12 @@ bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) =
 });
 
 // --> Token lists
-bot.command("showtoken", async (ctx: CommandContext<Context>) => {
-    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty)
+bot.command("showtokenlist", async (ctx: CommandContext<Context>) => {
+    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty);
 });
 
 bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) => {
-    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty)
+    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty);
 });
 
 // --> Handler fo inline buttons
@@ -85,7 +76,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     if (ctx.callbackQuery.data === BTN_LABELS.tokenEditorBoard.sendSeed) {
         await collectionConnect.updateOne({ token_name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
 
-        ctx.reply(COMMAND_TEXT.status.seedSended.finished, {
+        ctx.reply(ANSWER_TEXT.status.seedSended.finished, {
             reply_markup: StartBoard,
             parse_mode: "HTML",
         });
@@ -98,7 +89,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
         USER_STATE.tokenName = ctx.callbackQuery.data as string;
 
         await getTokenInfo(ctx, selectedToken.token_name, tokenInfo.token_body, tokenInfo.is_search_started, tokenInfo.is_seed_sended);
-        await ctx.reply(COMMAND_TEXT.token.actions, {
+        await ctx.reply(ANSWER_TEXT.token.actions, {
             reply_markup: TokenEditorBoard,
             parse_mode: "HTML",
         });
@@ -109,7 +100,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
 
 // ? Exit
 bot.hears(BTN_LABELS.tokenEditorBoard.exit, async (ctx: CommandContext<Context>) => {
-    await ctx.reply(COMMAND_TEXT.exit.toMenu, {
+    await ctx.reply(ANSWER_TEXT.exit.toMenu, {
         reply_markup: StartBoard,
     });
 });
@@ -118,7 +109,7 @@ bot.hears(BTN_LABELS.tokenEditorBoard.exit, async (ctx: CommandContext<Context>)
 bot.hears(BTN_LABELS.tokenEditorBoard.delete, async (ctx: CommandContext<Context>) => {
     USER_STATE[ctx.chat.id] = USER_STATES_LIST.editTokenName;
 
-    await ctx.reply(COMMAND_TEXT.delete.confirm, {
+    await ctx.reply(ANSWER_TEXT.delete.confirm, {
         reply_markup: ConfirmDelBoard,
     });
 });
@@ -132,11 +123,11 @@ bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) =
     // * Hard type assertion for prevent typo errors in async keyboard generating
     let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
 
-    await ctx.reply(COMMAND_TEXT.token.chooseFromList, {
+    await ctx.reply(ANSWER_TEXT.token.chooseFromList, {
         reply_markup: StartBoard,
         parse_mode: "HTML",
     });
-    await ctx.reply(COMMAND_TEXT.delete.success, {
+    await ctx.reply(ANSWER_TEXT.delete.success, {
         reply_markup: board,
     });
 });
@@ -145,7 +136,7 @@ bot.hears(BTN_LABELS.confirmDelBoard.no, async (ctx: CommandContext<Context>) =>
     const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
 
     const board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty);
-    ctx.reply(COMMAND_TEXT.delete.canceled, {
+    ctx.reply(ANSWER_TEXT.delete.canceled, {
         reply_markup: board,
     });
 });
@@ -154,7 +145,7 @@ bot.hears(BTN_LABELS.confirmDelBoard.no, async (ctx: CommandContext<Context>) =>
 bot.hears(BTN_LABELS.tokenEditorBoard.changeName, async (ctx: CommandContext<Context>) => {
     USER_STATE[ctx.chat.id] = USER_STATES_LIST.editTokenName;
 
-    ctx.reply(COMMAND_TEXT.token.editName, {
+    ctx.reply(ANSWER_TEXT.token.editName, {
         parse_mode: "HTML",
     });
 });
@@ -198,7 +189,7 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
 
         await collectionConnect.updateOne({ token_name: selectedToken.token_name }, { $set: { token_name: newTokenName } });
 
-        ctx.reply(COMMAND_TEXT.token.successChangedName, {
+        ctx.reply(ANSWER_TEXT.token.successChangedName, {
             reply_markup: StartBoard,
         });
     } else {

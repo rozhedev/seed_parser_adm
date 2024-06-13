@@ -1,8 +1,8 @@
 import { CommandContext, Context, InlineKeyboard } from "grammy";
 import { WithId } from "mongodb";
 import { TContext, TUserState } from "../types";
-import { COMMAND_TEXT } from "../data/command-text";
-import { PASSPHRASE_LENGTH } from "../data/init-data";
+import { ANSWER_TEXT } from "../data/command-text";
+import { SEED_LENGTH } from "../data/init-data";
 
 // * Don't change import method
 const RandExp = require("randexp");
@@ -14,9 +14,9 @@ export const genFromRegex = (regex: RegExp) => {
 };
 
 export const getTokenInfo = (ctx: TContext, name: string, body: string, isSearchStarted: boolean, isSeedSended: boolean) => {
-    let searchStatusText: string = isSearchStarted ? COMMAND_TEXT.status.searchStarted.yes : COMMAND_TEXT.status.searchStarted.no;
+    let searchStatusText: string = isSearchStarted ? ANSWER_TEXT.status.searchStarted.yes : ANSWER_TEXT.status.searchStarted.no;
 
-    let seedStatusText: string = isSeedSended ? COMMAND_TEXT.status.seedSended.yes : COMMAND_TEXT.status.seedSended.no;
+    let seedStatusText: string = isSeedSended ? ANSWER_TEXT.status.seedSended.yes : ANSWER_TEXT.status.seedSended.no;
     return ctx.reply(
         `
         Имя токена: <pre>${name}</pre> Токен для входа: <pre>${body}</pre>\n\n ${searchStatusText} \n ${seedStatusText} \n
@@ -53,7 +53,7 @@ export const useSeedPhrase = (wordArr: string[]) => {
     let randomIndex = 0;
     let passArr = [];
 
-    for (let i = 0; i < PASSPHRASE_LENGTH; i++) {
+    for (let i = 0; i < SEED_LENGTH; i++) {
         randomIndex = getRandomIndex(wordArr);
         passArr.push(wordArr[randomIndex]);
         if (i >= 1 && passArr[i] == passArr[i - 1]) passArr.push(wordArr[getRandomIndex(wordArr)]);
@@ -72,7 +72,7 @@ function getRandomIndex(wordArr: string[]) {
 export const genToken = async (ctx: CommandContext<Context>, store: TUserState, storeId: number, stateListProp: string) => {
     store[storeId] = stateListProp;
 
-    await ctx.reply(COMMAND_TEXT.token.enterName, {
+    await ctx.reply(ANSWER_TEXT.token.enterName, {
         parse_mode: "HTML",
     });
 };
@@ -83,7 +83,7 @@ export const showTokenList = async (ctx: CommandContext<Context>, collection: an
     // * Hard type assertion for prevent typo errors in async keyboard generating
     let board = getTokenListBoard(tokenList, errText) as unknown as InlineKeyboard;
 
-    await ctx.reply(COMMAND_TEXT.token.created, {
+    await ctx.reply(ANSWER_TEXT.token.created, {
         reply_markup: board,
     });
 };

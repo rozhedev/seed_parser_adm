@@ -12,4 +12,4 @@ export const REGEX_LIST = {
     token: /^[a-z0-9]{12}$/,
 };
 
-export const PASSPHRASE_LENGTH: number = 12;
+export const SEED_LENGTH: number = 12;
