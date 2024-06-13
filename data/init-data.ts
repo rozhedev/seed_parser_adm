@@ -6,6 +6,7 @@ export const USER_STATES_LIST = {
     waitTokenName: "enter_token_name",
     tokenInfo: "token_info",
     editTokenName: "edit_token_name",
+    enterSeed: "enter_seed",
 };
 
 export const REGEX_LIST = {

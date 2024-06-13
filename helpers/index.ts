@@ -49,6 +49,7 @@ export const getOneFromDB = (ctx: TContext, collection: any) => {
     return document;
 };
 
+// * useSeedPhrase f(x) for seed generation. Maybe useful in future versions
 export const useSeedPhrase = (wordArr: string[]) => {
     let randomIndex = 0;
     let passArr = [];

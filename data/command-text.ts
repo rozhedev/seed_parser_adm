@@ -15,6 +15,7 @@ export const ANSWER_TEXT = {
         actions: "<b>&#8595; Действия &#8595;</b>",
         editName: "Введите новое имя токена, например: <i>Иван, 34, Тула</i>",
         successChangedName: "Имя токена изменено",
+        enterSeed: "Введите seed для отправки",
     },
     exit: {
         toList: "Вернулся к списку:",

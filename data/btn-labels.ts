@@ -5,7 +5,7 @@ export const BTN_LABELS = {
     },
     tokenEditorBoard: {
         sendSeed: "Отправить seed",
-        genSeed: "Генерация seed",
+        enterSeed: "Ввести seed",
         changeName: "Изменить имя",
         exit: "Вийти в список",
         delete: "Удалить запись",

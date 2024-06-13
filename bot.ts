@@ -10,9 +10,8 @@ import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
 import { ANSWER_TEXT, COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
-import { bip39 } from "./data/bip39";
 
-import { genFromRegex, useSeedPhrase, getTokenInfo, getTokenListBoard, genToken, showTokenList } from "./helpers";
+import { genFromRegex, getTokenInfo, getTokenListBoard, genToken, showTokenList } from "./helpers";
 import { USER_STATE, selectedToken } from "./resources/store";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard } from "./resources/keyboard";
 
@@ -72,16 +71,6 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
 
     const tokenInfo = await collectionConnect.findOne({ token_name: selectedToken.token_name });
 
-    // * Send seed
-    if (ctx.callbackQuery.data === BTN_LABELS.tokenEditorBoard.sendSeed) {
-        await collectionConnect.updateOne({ token_name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
-
-        ctx.reply(ANSWER_TEXT.status.seedSended.finished, {
-            reply_markup: StartBoard,
-            parse_mode: "HTML",
-        });
-        return;
-    }
     // * Choose token & output token editor keyboard
     if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
     else {
@@ -94,6 +83,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
             parse_mode: "HTML",
         });
     }
+    await ctx.answerCallbackQuery();
 });
 
 // -->  ----Token Editor handlers----
@@ -150,13 +140,10 @@ bot.hears(BTN_LABELS.tokenEditorBoard.changeName, async (ctx: CommandContext<Con
     });
 });
 
-// ? Generate & send seed
-bot.hears(BTN_LABELS.tokenEditorBoard.genSeed, async (ctx: CommandContext<Context>) => {
-    const { passStr } = useSeedPhrase(bip39);
-    let board = new InlineKeyboard().text(BTN_LABELS.tokenEditorBoard.sendSeed).row();
-
-    ctx.reply(`seed-фраза: <code>${passStr}</code>`, {
-        reply_markup: board,
+// ? Enter seed
+bot.hears(BTN_LABELS.tokenEditorBoard.enterSeed, async (ctx: CommandContext<Context>) => {
+    USER_STATE[ctx.chat.id] = USER_STATES_LIST.enterSeed;
+    ctx.reply(ANSWER_TEXT.token.enterSeed, {
         parse_mode: "HTML",
     });
 });
@@ -189,8 +176,19 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
 
         await collectionConnect.updateOne({ token_name: selectedToken.token_name }, { $set: { token_name: newTokenName } });
 
-        ctx.reply(ANSWER_TEXT.token.successChangedName, {
+        await ctx.reply(ANSWER_TEXT.token.successChangedName, {
             reply_markup: StartBoard,
+        });
+    }
+    // * Get seed message & change keyboard
+    else if (USER_STATE[userId] === USER_STATES_LIST.enterSeed) {
+        const enteredSeed = ctx.message?.text as string;
+
+        await collectionConnect.updateOne({ token_name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
+
+        await ctx.reply(ANSWER_TEXT.status.seedSended.finished, {
+            reply_markup: StartBoard,
+            parse_mode: "HTML",
         });
     } else {
         await ctx.reply(ERR_TEXT.msgSended);
