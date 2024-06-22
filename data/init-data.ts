@@ -3,9 +3,9 @@ export const INIT_DATA = {
 };
 
 export const USER_STATES_LIST = {
-    waitTokenName: "enter_token_name",
+    waitTokenName: "enter_name",
     tokenInfo: "token_info",
-    editTokenName: "edit_token_name",
+    editTokenName: "edit_name",
     enterSeed: "enter_seed",
 };
 

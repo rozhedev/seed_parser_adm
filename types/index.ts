@@ -3,10 +3,10 @@ import { ObjectId } from "mongodb";
 
 export type TUserState = { [key: number | string]: string };
 
-export type T_Token = {
+export type TUser = {
     id?: ObjectId;
-    token_name: string;
-    token_body: string;
+    name: string;
+    password: string;
     is_search_started: boolean;
     is_seed_sended: boolean;
 };

@@ -32,8 +32,8 @@ export const getTokenListBoard = (tokenList: WithId<any>[], errText: string) => 
 
     if (!tokenList.length) return new InlineKeyboard().text(errText).row();
 
-    // * Get token list from DB and save only token_name prop
-    const TokenListArr: string[] = tokenList.map(({ token_name }) => token_name);
+    // * Get token list from DB and save only name prop
+    const TokenListArr: string[] = tokenList.map(({ name }) => name);
 
     // * Create btn rows via Inline keyboard
     TokenListArr.forEach((btn) => {
@@ -45,7 +45,7 @@ export const getTokenListBoard = (tokenList: WithId<any>[], errText: string) => 
 
 export const getOneFromDB = (ctx: TContext, collection: any) => {
     const data = ctx?.callbackQuery?.data as string;
-    const document = collection.findOne({ token_name: data });
+    const document = collection.findOne({ name: data });
     return document;
 };
 

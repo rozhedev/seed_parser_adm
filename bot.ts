@@ -3,8 +3,8 @@ import { Bot, GrammyError, HttpError, InlineKeyboard, Context, CommandContext, B
 import { hydrate } from "@grammyjs/hydrate";
 import { WithId } from "mongodb";
 
-import { T_Token } from "./types";
-import { BOT_TOKEN } from "./data/env";
+import { TUser } from "./types";
+import { BOT_TOKEN, COLLECTION_NAME } from "./data/env";
 import { client } from "./data/db";
 import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
 import { ANSWER_TEXT, COMMAND_TEXT } from "./data/command-text";
@@ -20,7 +20,9 @@ dotenv.config();
 // * Use type: any for prevent error
 const bot: any = new Bot<Context>(BOT_TOKEN);
 bot.use(hydrate());
-const collectionConnect = client.db("auth_tokens").collection("tokens");
+
+// * Don't change collection name
+const collectionConnect = client.db("auth_tokens").collection(COLLECTION_NAME);
 
 // --> Commands config
 bot.api.setMyCommands([
@@ -67,9 +69,9 @@ bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) 
 
 // --> Handler fo inline buttons
 bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
-    selectedToken.token_name = ctx.callbackQuery.data as string;
+    selectedToken.name = ctx.callbackQuery.data as string;
 
-    const tokenInfo = await collectionConnect.findOne({ token_name: selectedToken.token_name });
+    const tokenInfo = await collectionConnect.findOne({ name: selectedToken.name });
 
     // * Choose token & output token editor keyboard
     if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
@@ -77,7 +79,7 @@ bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
         // * Use prop as external store for save selected token name
         USER_STATE.tokenName = ctx.callbackQuery.data as string;
 
-        await getTokenInfo(ctx, selectedToken.token_name, tokenInfo.token_body, tokenInfo.is_search_started, tokenInfo.is_seed_sended);
+        await getTokenInfo(ctx, selectedToken.name, tokenInfo.password, tokenInfo.is_search_started, tokenInfo.is_seed_sended);
         await ctx.reply(ANSWER_TEXT.token.actions, {
             reply_markup: TokenEditorBoard,
             parse_mode: "HTML",
@@ -107,7 +109,7 @@ bot.hears(BTN_LABELS.tokenEditorBoard.delete, async (ctx: CommandContext<Context
 // ? Delete handlers
 bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) => {
     // * necessary variable assign
-    const deletedDocument = await collectionConnect.deleteOne({ token_name: selectedToken.token_name });
+    const deletedDocument = await collectionConnect.deleteOne({ name: selectedToken.name });
     const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
 
     // * Hard type assertion for prevent typo errors in async keyboard generating
@@ -162,19 +164,19 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
         // * Pass false by default
         getTokenInfo(ctx, tokenName, tokenBody, false, false);
 
-        const newToken: T_Token = {
-            token_name: tokenName,
-            token_body: tokenBody,
+        const newUser: TUser = {
+            name: tokenName,
+            password: tokenBody,
             is_search_started: false,
             is_seed_sended: false,
         };
-        await collectionConnect.insertOne({ ...newToken });
+        await collectionConnect.insertOne({ ...newUser });
     }
     // * Edit token name
     else if (USER_STATE[userId] === USER_STATES_LIST.editTokenName) {
         const newTokenName = ctx.message?.text as string;
 
-        await collectionConnect.updateOne({ token_name: selectedToken.token_name }, { $set: { token_name: newTokenName } });
+        await collectionConnect.updateOne({ name: selectedToken.name }, { $set: { name: newTokenName } });
 
         await ctx.reply(ANSWER_TEXT.token.successChangedName, {
             reply_markup: StartBoard,
@@ -184,7 +186,7 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
     else if (USER_STATE[userId] === USER_STATES_LIST.enterSeed) {
         const enteredSeed = ctx.message?.text as string;
 
-        await collectionConnect.updateOne({ token_name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
+        await collectionConnect.updateOne({ name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
 
         await ctx.reply(ANSWER_TEXT.status.seedSended.finished, {
             reply_markup: StartBoard,

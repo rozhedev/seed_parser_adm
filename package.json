@@ -4,7 +4,7 @@
   "description": "seed parser admin dashboard",
   "main": "bot.js",
   "scripts": {
-    "start": "nodemon bot.ts"
+    "start": "nodemon bot.ts -p 3001"
   },
   "repository": {
     "type": "git",
