@@ -1,12 +1,12 @@
 import * as dotenv from "dotenv";
 import { Bot, GrammyError, HttpError, InlineKeyboard, Context, CommandContext, BotError, CallbackQueryContext, Keyboard } from "grammy";
 import { hydrate } from "@grammyjs/hydrate";
-import { WithId } from "mongodb";
+import { Collection, WithId } from "mongodb";
 
 import { TUser } from "./types";
-import { BOT_TOKEN, COLLECTION_NAME } from "./data/env";
+import { BOT_TOKEN, COLLECTION_NAME, DB_NAME } from "./data/env";
 import { client } from "./data/db";
-import { USER_STATES_LIST, REGEX_LIST } from "./data/init-data";
+import { USER_STATES_LIST, REGEX_LIST, INIT_DATA } from "./data/init-data";
 import { ANSWER_TEXT, COMMAND_TEXT } from "./data/command-text";
 import { ERR_TEXT } from "./data/err-text";
 import { BTN_LABELS } from "./data/btn-labels";
@@ -21,8 +21,8 @@ dotenv.config();
 const bot: any = new Bot<Context>(BOT_TOKEN);
 bot.use(hydrate());
 
-// * Don't change collection name
-const collectionConnect = client.db("auth_tokens").collection(COLLECTION_NAME);
+const db = client.db(DB_NAME);
+const UsersCollection: Collection<TUser> = db.collection(COLLECTION_NAME);
 
 // --> Commands config
 bot.api.setMyCommands([
@@ -60,18 +60,18 @@ bot.hears(BTN_LABELS.startBoard.genToken, async (ctx: CommandContext<Context>) =
 
 // --> Token lists
 bot.command("showtokenlist", async (ctx: CommandContext<Context>) => {
-    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty);
+    showTokenList(ctx, UsersCollection, ERR_TEXT.tokenListEmpty);
 });
 
 bot.hears(BTN_LABELS.startBoard.tokenList, async (ctx: CommandContext<Context>) => {
-    showTokenList(ctx, collectionConnect, ERR_TEXT.tokenListEmpty);
+    showTokenList(ctx, UsersCollection, ERR_TEXT.tokenListEmpty);
 });
 
 // --> Handler fo inline buttons
 bot.on("callback_query:data", async (ctx: CallbackQueryContext<Context>) => {
     selectedToken.name = ctx.callbackQuery.data as string;
 
-    const tokenInfo = await collectionConnect.findOne({ name: selectedToken.name });
+    const tokenInfo = await UsersCollection.findOne({ name: selectedToken.name });
 
     // * Choose token & output token editor keyboard
     if (tokenInfo === null) ctx.reply(ERR_TEXT.tokenNotFound);
@@ -109,8 +109,8 @@ bot.hears(BTN_LABELS.tokenEditorBoard.delete, async (ctx: CommandContext<Context
 // ? Delete handlers
 bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) => {
     // * necessary variable assign
-    const deletedDocument = await collectionConnect.deleteOne({ name: selectedToken.name });
-    const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
+    const deletedDocument = await UsersCollection.deleteOne({ name: selectedToken.name });
+    const tokenList: WithId<any>[] = await UsersCollection.find({}).toArray();
 
     // * Hard type assertion for prevent typo errors in async keyboard generating
     let board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty) as unknown as InlineKeyboard;
@@ -125,7 +125,7 @@ bot.hears(BTN_LABELS.confirmDelBoard.yes, async (ctx: CommandContext<Context>) =
 });
 
 bot.hears(BTN_LABELS.confirmDelBoard.no, async (ctx: CommandContext<Context>) => {
-    const tokenList: WithId<any>[] = await collectionConnect.find({}).toArray();
+    const tokenList: WithId<any>[] = await UsersCollection.find({}).toArray();
 
     const board = getTokenListBoard(tokenList, ERR_TEXT.tokenListEmpty);
     ctx.reply(ANSWER_TEXT.delete.canceled, {
@@ -153,10 +153,11 @@ bot.hears(BTN_LABELS.tokenEditorBoard.enterSeed, async (ctx: CommandContext<Cont
 
 // --> Any message handler
 bot.on("msg", async (ctx: CommandContext<Context>) => {
-    const userId: number = ctx.chat.id;
+    const chatID: number = ctx.chat.id;
+    const username: string = ctx.from?.username || "";
 
     // * Enter token name
-    if (USER_STATE[userId] === USER_STATES_LIST.waitTokenName) {
+    if (USER_STATE[chatID] === USER_STATES_LIST.waitTokenName) {
         // * Necessary type assertion for prevent typo errors
         const tokenName = ctx.message?.text as string;
         const tokenBody = genFromRegex(REGEX_LIST.token) as string;
@@ -165,28 +166,31 @@ bot.on("msg", async (ctx: CommandContext<Context>) => {
         getTokenInfo(ctx, tokenName, tokenBody, false, false);
 
         const newUser: TUser = {
+            tg_username: username,
             name: tokenName,
             password: tokenBody,
+            sended_seed: [],
             is_search_started: false,
             is_seed_sended: false,
         };
-        await collectionConnect.insertOne({ ...newUser });
+        await UsersCollection.insertOne({ ...newUser });
     }
     // * Edit token name
-    else if (USER_STATE[userId] === USER_STATES_LIST.editTokenName) {
+    else if (USER_STATE[chatID] === USER_STATES_LIST.editTokenName) {
         const newTokenName = ctx.message?.text as string;
 
-        await collectionConnect.updateOne({ name: selectedToken.name }, { $set: { name: newTokenName } });
+        await UsersCollection.updateOne({ name: selectedToken.name }, { $set: { name: newTokenName } });
 
         await ctx.reply(ANSWER_TEXT.token.successChangedName, {
             reply_markup: StartBoard,
         });
     }
     // * Get seed message & change keyboard
-    else if (USER_STATE[userId] === USER_STATES_LIST.enterSeed) {
+    else if (USER_STATE[chatID] === USER_STATES_LIST.enterSeed) {
         const enteredSeed = ctx.message?.text as string;
 
-        await collectionConnect.updateOne({ name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
+        await UsersCollection.updateOne({ name: USER_STATE.tokenName }, { $push: { sended_seed: enteredSeed } });
+        await UsersCollection.updateOne({ name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
 
         await ctx.reply(ANSWER_TEXT.status.seedSended.finished, {
             reply_markup: StartBoard,

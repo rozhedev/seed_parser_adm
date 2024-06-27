@@ -9,13 +9,13 @@ export const COMMAND_TEXT = {
 export const ANSWER_TEXT = {
     startMessage: `Админка для управления клиентами\. Сайт расположен <b><a href="${INIT_DATA.domain}">здесь</a></b>`,
     token: {
-        enterName: `Введите имя токена, например: <i>Тамара 42 Волгоград</i>`,
+        enterName: `Введите уникальное имя токена, например: <i>Тамара 42 Волгоград</i>`,
         created: "Созданные токены:",
         chooseFromList: "Выбери токен для дальнейших действий",
         actions: "<b>&#8595; Действия &#8595;</b>",
         editName: "Введите новое имя токена, например: <i>Иван 34 Тула</i>",
         successChangedName: "Имя токена изменено",
-        enterSeed: "Введите seed для отправки",
+        enterSeed: "Введите seed для отправки (12 слов через пробел)",
     },
     exit: {
         toList: "Вернулся к списку:",

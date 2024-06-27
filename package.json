@@ -27,7 +27,9 @@
   "dependencies": {
     "@grammyjs/types": "^3.8.0",
     "@types/mongodb": "^4.0.7",
+    "@types/node-fetch": "^2.6.11",
     "mongodb": "^6.7.0",
+    "node-fetch": "^3.3.2",
     "randexp": "^0.5.3",
     "ts-node": "^10.9.2"
   }

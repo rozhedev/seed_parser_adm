@@ -1,5 +1,6 @@
 export const INIT_DATA = {
-    domain: "https://google.com",
+    domain: "http://localhost:3000",
+    sendMsgRoute: "http://localhost:3000/api/tg_message",
 };
 
 export const USER_STATES_LIST = {
