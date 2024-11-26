@@ -6,12 +6,18 @@ import { str__searchStarted, str__seedSended, SEED_LENGTH, str__token } from "..
 // * Don't change import method
 const RandExp = require("randexp");
 
+// --> Common helpers
+export function randomIntNumByInterval(min = 0, max: number): number {
+    return Math.floor(Math.random() * max) + min;
+}
+
 export const genFromRegex = (regex: RegExp) => {
     const randexp: any = new RandExp(regex);
     let token: string = randexp.gen();
     return token;
 };
 
+// --> Token helpers
 export const getTokenInfo = (ctx: TContext, name: string, body: string, isSearchStarted: boolean, isSeedSended: boolean) => {
     let searchStatusText: string = isSearchStarted ? str__searchStarted.yes : str__searchStarted.no;
 
@@ -41,6 +47,7 @@ export const getTokenListBoard = (tokenList: WithId<any>[], errText: string) => 
     });
     return board;
 };
+// --> --------------------------
 
 export const getOneFromDB = (ctx: TContext, collection: any) => {
     const data = ctx?.callbackQuery?.data as string;
@@ -54,19 +61,15 @@ export const useSeedPhrase = (wordArr: string[]) => {
     let passArr = [];
 
     for (let i = 0; i < SEED_LENGTH; i++) {
-        randomIndex = getRandomIndex(wordArr);
+        randomIndex = randomIntNumByInterval(0, wordArr.length - 1);
         passArr.push(wordArr[randomIndex]);
-        if (i >= 1 && passArr[i] == passArr[i - 1]) passArr.push(wordArr[getRandomIndex(wordArr)]);
+        if (i >= 1 && passArr[i] == passArr[i - 1]) passArr.push(wordArr[randomIntNumByInterval(0, wordArr.length - 1)]);
     }
 
     let passStr = passArr.join(" ");
     let passLength = passArr.length;
     return { passArr, passStr, passLength };
 };
-
-function getRandomIndex(wordArr: string[]) {
-    return Math.round(Math.random() * wordArr.length);
-}
 
 // --> Standart bot commands
 export const genToken = async (ctx: CommandCtx, store: TUserState, storeId: number, stateListProp: string) => {

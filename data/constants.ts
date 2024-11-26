@@ -12,6 +12,32 @@ export const USER_STATES_LIST = {
 
 export const REGEX_LIST = {
     token: /^[a-z0-9]{12}$/,
+    enteredLog: /^[a-z]{3,5}:(\d+\.\d+):(\d+(\.\d+)?)$/,
+    enteredSeed: /^([a-z]{3,8}\s){11}[a-z]{3,8}/,
 };
 
 export const SEED_LENGTH: number = 12;
+
+export const CryptoExchangers = {
+    coinbase: "Coinbase",
+    kraken: "Kraken",
+    kuCoin: "KuCoin",
+    bitfinex: "Bitfinex",
+    okx: "OKX",
+    gateIO: "Gate.io",
+    bybit: "Bybit",
+    mexc: "MEXC",
+    huobi: "Huobi",
+    gemini: "Gemini",
+    bitget: "Bitget",
+    cryptoCom: "Crypto.com",
+    lbank: "LBank",
+    wazirX: "WazirX",
+    phemex: "Phemex",
+    coincheck: "Coincheck",
+    bitMart: "BitMart",
+    poloniex: "Poloniex",
+    zbCom: "ZB.com",
+};
+
+export const CryptoExchangersValues = Object.values(CryptoExchangers);

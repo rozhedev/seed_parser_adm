@@ -16,19 +16,18 @@ import {
     str_cmd__genToken,
     str_cmd__showTokenList,
     str__startMessage,
-    str_err__tokenListEmpty,
-    btn__start,
-    str_err__tokenNotFound,
+    str__seedSended,
     str__exit,
     str__token,
-    btn__tokenEditor,
     str__delete,
+    str__err,
+    btn__start,
+    btn__tokenEditor,
     btn__confirmDel,
-    str__seedSended,
-    str_err__msgSended,
+    CryptoExchangersValues,
 } from "./data";
 
-import { genFromRegex, getTokenInfo, getTokenListBoard, genToken, showTokenList } from "./helpers";
+import { genFromRegex, getTokenInfo, getTokenListBoard, genToken, showTokenList, randomIntNumByInterval } from "./helpers";
 import { TokenEditorBoard, StartBoard, ConfirmDelBoard, selectedToken, USER_STATE } from "./resources";
 
 dotenv.config();
@@ -76,21 +75,21 @@ bot.hears(btn__start.genToken, async (ctx: CommandCtx) => {
 
 // --> Token lists
 bot.command("showtokenlist", async (ctx: CommandCtx) => {
-    showTokenList(ctx, UsersCollection, str_err__tokenListEmpty);
+    showTokenList(ctx, UsersCollection, str__err.tokenListEmpty);
 });
 
 bot.hears(btn__start.tokenList, async (ctx: CommandCtx) => {
-    showTokenList(ctx, UsersCollection, str_err__tokenListEmpty);
+    showTokenList(ctx, UsersCollection, str__err.tokenListEmpty);
 });
 
-// --> Handler fo inline buttons
+// --> Handler for inline buttons
 bot.on("callback_query:data", async (ctx: CbQueryCtx) => {
     selectedToken.name = ctx.callbackQuery.data as string;
 
     const tokenInfo = await UsersCollection.findOne({ name: selectedToken.name });
 
     // * Choose token & output token editor keyboard
-    if (tokenInfo === null) ctx.reply(str_err__tokenNotFound);
+    if (tokenInfo === null) ctx.reply(str__err.tokenNotFound);
     else {
         // * Use prop as external store for save selected token name
         USER_STATE.tokenName = ctx.callbackQuery.data as string;
@@ -129,7 +128,7 @@ bot.hears(btn__confirmDel.yes, async (ctx: CommandCtx) => {
     const tokenList: WithId<any>[] = await UsersCollection.find({}).toArray();
 
     // * Hard type assertion for prevent typo errors in async keyboard generating
-    let board = getTokenListBoard(tokenList, str_err__tokenListEmpty) as unknown as InlineKeyboard;
+    let board = getTokenListBoard(tokenList, str__err.tokenListEmpty) as unknown as InlineKeyboard;
 
     await ctx.reply(str__token.chooseFromList, {
         reply_markup: StartBoard,
@@ -143,7 +142,7 @@ bot.hears(btn__confirmDel.yes, async (ctx: CommandCtx) => {
 bot.hears(btn__confirmDel.no, async (ctx: CommandCtx) => {
     const tokenList: WithId<any>[] = await UsersCollection.find({}).toArray();
 
-    const board = getTokenListBoard(tokenList, str_err__tokenListEmpty);
+    const board = getTokenListBoard(tokenList, str__err.tokenListEmpty);
     ctx.reply(str__delete.canceled, {
         reply_markup: board,
     });
@@ -203,9 +202,24 @@ bot.on("msg", async (ctx: CommandCtx) => {
     }
     // * Get seed message & change keyboard
     else if (USER_STATE[chatID] === USER_STATES_LIST.enterSeed) {
-        const enteredSeed = ctx.message?.text as string;
+        const enteredStr = ctx.message?.text as string;
 
-        await UsersCollection.updateOne({ name: USER_STATE.tokenName }, { $push: { sended_seed: enteredSeed } });
+        if (!REGEX_LIST.enteredSeed.test(enteredStr)) {
+            return ctx.reply(str__err.invalidSeed);
+        }
+
+        // ? For future versions (log entered)
+        // const enteredInfo = enteredStr.split(":");
+        // const randomEx = CryptoExchangersValues[randomIntNumByInterval(0, CryptoExchangersValues.length - 1)]
+
+        // const finalLog = `usdt/${enteredInfo[0]} ${enteredInfo[1]} = ${enteredInfo[2]}$ | ${randomEx}`;
+
+        // if (!REGEX_LIST.enteredLog.test(enteredStr)) {
+        //     return ctx.reply(str_err__invalidLog);
+        // }
+        // ? ----------------------
+
+        await UsersCollection.updateOne({ name: USER_STATE.tokenName }, { $push: { sended_seed: enteredStr } });
         await UsersCollection.updateOne({ name: USER_STATE.tokenName }, { $set: { is_seed_sended: true } });
 
         await ctx.reply(str__seedSended.finished, {
@@ -213,9 +227,10 @@ bot.on("msg", async (ctx: CommandCtx) => {
             parse_mode: "HTML",
         });
     } else {
-        await ctx.reply(str_err__msgSended);
+        await ctx.reply(str__err.msgSended);
     }
 });
+// -->  --------------------
 
 // --> Error handling
 bot.catch((err: BotError) => {

@@ -6,7 +6,7 @@ export const COMMAND_TEXT = {
     str_cmd__showTokenList: "Показать список токенов",
 };
 
-export const ANSWER_TEXT = {
+export const STRINGS = {
     str__startMessage: `Админка для управления клиентами\. Сайт расположен <b><a href="${INIT_DATA.domain}">здесь</a></b>`,
     str__token: {
         enterName: `Введите уникальное имя токена, например: <i>Тамара 42 Волгоград</i>`,
@@ -35,10 +35,11 @@ export const ANSWER_TEXT = {
         no: "<i><b>seed-фраза не отправлена</b></i>",
         finished: "Фраза отправлена, поиск в пользователя остановлен",
     },
-};
-
-export const ERR_TEXT = {
-    str_err__msgSended: "Бот не понимает сообщений, пользуйся кнопками",
-    str_err__tokenListEmpty: "Токены не добавлены",
-    str_err__tokenNotFound: "Токен отсутствует",
+    str__err: {
+        msgSended: "Бот не понимает сообщений, пользуйся кнопками",
+        tokenListEmpty: "Токены не добавлены",
+        tokenNotFound: "Токен отсутствует",
+        invalidLog: "Введенный текст не соответствует примеру: монета:сумма(монета):сумма(USD)",
+        invalidSeed: "Введите seed фразу правильно. 12 слов через пробел",
+    },
 };
