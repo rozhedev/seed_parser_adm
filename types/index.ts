@@ -1,6 +1,14 @@
-import { CallbackQueryContext, CommandContext, Context, InlineKeyboard, Keyboard } from "grammy";
+import { type CallbackQueryContext, type CommandContext, Context, InlineKeyboard, Keyboard } from "grammy";
 import { ObjectId } from "mongodb";
 
+// Utilities
+export type CommandCtx = CommandContext<Context>;
+export type CbQueryCtx = CallbackQueryContext<Context>;
+
+export type TContext = CommandCtx | CbQueryCtx;
+export type TBoard = Keyboard | InlineKeyboard;
+
+// User
 export type TUserState = { [key: number | string]: string };
 
 export type TUser = {
@@ -14,7 +22,3 @@ export type TUser = {
 };
 
 export type TUserArr = TUser[];
-
-export type TContext = CommandContext<Context> | CallbackQueryContext<Context>;
-
-export type TBoard = Keyboard | InlineKeyboard;

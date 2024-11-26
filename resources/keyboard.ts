@@ -1,16 +1,14 @@
 import { InlineKeyboard, Keyboard } from "grammy";
-import { BTN_LABELS } from "../data/btn-labels";
+import { btn__confirmDel, btn__start, btn__tokenEditor } from "../data";
 
-export const StartBoard: Keyboard = new Keyboard().text(BTN_LABELS.startBoard.genToken).text(BTN_LABELS.startBoard.tokenList).resized().persistent();
+export const StartBoard: Keyboard = new Keyboard().text(btn__start.genToken).text(btn__start.tokenList).resized().persistent();
 
-export const TokenEditorBoard: Keyboard = new Keyboard()
-    .text(BTN_LABELS.tokenEditorBoard.enterSeed)
-    .text(BTN_LABELS.tokenEditorBoard.changeName)
-    .row()
-    .text(BTN_LABELS.tokenEditorBoard.exit)
-    .text(BTN_LABELS.tokenEditorBoard.delete)
-    .resized();
+/* prettier-ignore-start */
 
-export const ConfirmDelBoard = new Keyboard().text(BTN_LABELS.confirmDelBoard.yes).text(BTN_LABELS.confirmDelBoard.no).resized().oneTime();
+export const TokenEditorBoard: Keyboard = new Keyboard().text(btn__tokenEditor.enterSeed).text(btn__tokenEditor.changeName).row().text(btn__tokenEditor.exit).text(btn__tokenEditor.delete).resized();
 
-export const SendBoard: Keyboard = new Keyboard().text(BTN_LABELS.tokenEditorBoard.sendSeed).row().resized();
+/* prettier-ignore-end */
+
+export const ConfirmDelBoard = new Keyboard().text(btn__confirmDel.yes).text(btn__confirmDel.no).resized().oneTime();
+
+export const SendBoard: Keyboard = new Keyboard().text(btn__tokenEditor.sendSeed).row().resized();
